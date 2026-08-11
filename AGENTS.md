@@ -34,10 +34,11 @@ The only meaningful validation is:
 - `.properties` files must keep valid Spring property syntax — in
   particular, multi-line values use a trailing `\` to continue onto the
   next line, and nested curly-brace map/list literals must stay balanced.
-- Changes only take effect once the consuming service (eSignet, eSignet
-  Signup, or Mock Identity System) is restarted or reloads the config
-  server on the branch/label it is pointed at. There is no CI in this repo
-  today (no `.github/workflows` directory exists on `develop`).
+- Changes take effect after the consuming service (eSignet, eSignet
+  Signup, or Mock Identity System) restarts or explicitly refreshes its
+  configuration from the config server on its branch/label. There is no
+  CI in this repo today (no `.github/workflows` directory exists on
+  `develop`).
 
 ## Configuration
 
@@ -45,6 +46,7 @@ Root-level files on `develop` (verified via `git ls-tree`):
 
 ```text
 .gitignore
+AGENTS.md
 LICENSE
 README.md
 amr-acr-mapping.json
@@ -73,7 +75,11 @@ being hardcoded here, including:
 - `db.dbuser.password`
 - `keycloak.external.url`, `keycloak.internal.host`, `keycloak.internal.url`, `keycloak.admin.password`
 - `mosip.ida.client.secret`, `mosip.admin.client.secret`, `mosip.reg.client.secret`, `mosip.prereg.client.secret`
-- `softhsm.kernel.pin`, `softhsm-security-pin`
+- `softhsm.kernel.pin`, `softhsm-security-pin` (per the header comment in
+  each properties file — the actual placeholder used in-file differs per
+  service: `${softhsm.esignet.security.pin}` in
+  `esignet-default.properties`, `${softhsm.mock.identity.system.security.pin}`
+  in `mock-identity-system-default.properties`)
 - `email.smtp.host`, `email.smtp.username`, `email.smtp.secret`
 - `mosip.kernel.tokenid.uin.salt`, `mosip.kernel.tokenid.partnercode.salt`
 - `mosip.api.internal.url`, `mosip.api.public.url`
@@ -105,8 +111,10 @@ Files are grouped by which service consumes them:
   (mock verifier's terms/consent content), `mock-idv-user-story.json`
   (scripted frame-by-frame liveness/IDV story used by the mock verifier).
 
-`README.md` documents this same grouping with direct links; keep it in
-sync when files are added, renamed, or removed.
+`README.md` documents eSignet and eSignet Signup with direct links, but
+does not currently link `mock-identity-system-default.properties` or any
+of the JSON files above — do not assume it is a complete index of this
+grouping.
 
 ## Development Workflow
 
@@ -118,8 +126,11 @@ sync when files are added, renamed, or removed.
 3. Edit the relevant `.properties`/`.json` file directly. Keep changes
    scoped to one service/concern per PR where possible.
 4. Validate JSON syntax and re-check any Spring property placeholders you
-   touched still resolve to values defined either elsewhere in the same
-   file or via the environment-variable list described above.
+   touched: they must resolve either to a value defined elsewhere in the
+   same file, to a secret in the environment-variable list above, or to a
+   non-secret config-server host/URL placeholder (see Repository-Specific
+   Considerations below) — the secret list is not exhaustive of every
+   valid placeholder.
 5. Commit with sign-off (`git commit -s`) and push to your fork, then open
    a PR against `mosip/esignet-config`'s `develop` branch.
 
